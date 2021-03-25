@@ -1,9 +1,113 @@
-//Calculating the equation of the trace cubed = 0 variety inside \tilde{S}.
+//Equations for quintics landing in same orbit
+
+//Structure of code:
+//We work in the sextic resolvent ring S_f.
+//Say x = \sum x_i \beta_i^*, similarly for y in terms of yi.
+//Then we look for c,d,e in \mathbb{Z}^5 such that the matrix (x,c,d,e,y) is in GL5(\mathbb{Z})
+//and c,d,e are orthonormal wrt 8 \Delta(f) (x^2,2xy,y^2).
+
+//These are necessary conditions for being of the form \Phi(g)
+
+//Note: Trivial case is x = e_1, y = e_5, c = e_2, d = e_3, e = e_4 (e_i are unit vectors).
+//Less non-trivial but still general case comes from GL2 action.
+
+//In this script:::::
+//We investigate whether the D6 equations follow from the basis equations.
 
 Q := RationalField();
+//P<x1,x2,x3,x4,x5,y1,y2,y3,y4,y5,t1,t2,t3,t4> := PolynomialRing(Q,14);
+P<x1,x2,x3,x4,x5,y1,y2,y3,y4,y5,f0,f1,f2,f3,f4,f5> := PolynomialRing(Q,16);
+R<x1,x2,x3,x4,x5,y1,y2,y3,y4,y5> := PolynomialRing(Q,10);
 
-P<f0,f1,f2,f3,f4,f5,y1,y2,y3,y4,y5> := PolynomialRing(Q,11);
+//f0 := 1;
+//f1 := 0;
+//f2 := 0;
+//f3 := 0;
+//f4 := 0;
+//f5 := 1;
 
+//Phi_f := [[0,t3,-t2,t1,0],[-t3,0,-f0*t1-f1*t2,-f2*t2-f3*t3,-t4],[t2,f0*t1+f1*t2,0,-f4*t3-f5*t4,t3],[-t1,f2*t2+f3*t3,f4*t3+f5*t4,0,-t2],[0,t4,-t3,t2,0]];
+
+//Matrix functions
+
+matrix_mult := function(A,B)
+	product := [];
+	for i := 1 to #A do
+		Append(~product,[]);
+		for j := 1 to #B[1] do
+			entry := 0;
+			for k := 1 to #A[1] do
+				entry +:= A[i,k]*B[k,j];
+			end for;
+			Append(~product[i],entry);
+		end for;
+	end for;
+	return product;
+end function;
+
+matrix_scalar := function(A,k)
+	product := [];
+	for i := 1 to #A do
+		Append(~product,[]);
+		for j := 1 to #A[1] do
+			Append(~product[i],A[i,j]*k);
+		end for;
+	end for;
+	return product;
+end function;
+
+transpose := function(A)
+	A_t := [];
+	for j := 1 to #(A[1]) do
+		Append(~A_t,[]);
+		for i := 1 to #A do
+			A_t[j,i] := A[i,j];
+		end for;
+	end for;
+	return A_t;
+end function;
+
+submatrix := function(A,i,j)
+	Asub := A[1..i-1] cat A[i+1..#A];
+	for k := 1 to #A-1 do
+        Asub[k] := Asub[k][1..j-1] cat Asub[k][j+1..#A[1]];
+    end for;
+    return Asub;
+end function;
+
+determinant := function(A) 
+    total := 0;
+
+    if #A eq 1 then
+        return A[1,1];
+    end if;
+
+    for col := 1 to #A do
+        Asub := submatrix(A,1,col);
+        subdet := $$(Asub);
+        sign := (-1) ^ (col+1 mod 2);
+        total +:= sign * A[1,col] * subdet;
+    end for;
+    return total;
+end function;
+
+cofactor_matrix := function(A)
+	cofactor := A;
+	if #A eq 1 then
+		return A;
+	end if;
+	for i := 1 to #A do
+		for j := 1 to #A do
+			sub := submatrix(A,i,j);
+			sign := (-1) ^ (i+j mod 2);
+			cofactor[j,i] := sign*determinant(sub);
+		end for;
+	end for;
+	return cofactor;
+end function;
+
+//Invariants and mult coeffs.  Need to change basis, new b1 = - old b5, new b5 = old b1.
+//Change of basis comes later
 invt := [ ];
 for i := 1 to 6 do
 	Append(~invt, [ ]);
@@ -208,73 +312,50 @@ for i := 2 to 6 do
 	end for;
 end for;
 
-S := AssociativeAlgebra< P, 6 | mult_coeffs >;
+//Haven't yet changed basis, here we go:
+mult_coeffs2 := mult_coeffs;
+swap := [1,6,3,4,5,2];
+for i := 1 to 6 do
+	for j := 1 to 6 do
+		for k := 1 to 6 do
+			I := swap[i];
+			J := swap[j];
+			K := swap[k];
+			sign := 1;
+			if i eq 2 then
+				sign := - sign;
+			end if;
+			if j eq 2 then
+				sign := - sign;
+			end if;
+			if k eq 2 then
+				sign := - sign;
+			end if;
+			mult_coeffs2[i,j,k] := mult_coeffs[I,J,K]*sign;
+		end for;
+	end for;
+end for;
 
-//Trace of beta_i beta_j, indexed from 1 to 6
+mult_coeffs2[2,3,4] + mult_coeffs[6,3,4];
+mult_coeffs[3,2,4] + mult_coeffs[6,3,4];
+mult_coeffs2[4,3,6] - mult_coeffs[4,3,2];
+mult_coeffs2[3,4,5] - mult_coeffs[3,4,5];
+mult_coeffs2[2,6,4] + mult_coeffs[2,6,4];
+mult_coeffs2[2,6,6] + mult_coeffs[2,6,2];
+mult_coeffs2[2,6,2] - mult_coeffs[2,6,6];
+
+//Trace of beta_i beta_j, in new basis.
 trace := function(i,j)
 	tr := 0;
 	for k := 1 to 6 do
 		for l := 1 to 6 do
-			tr +:= mult_coeffs[i,j,k]*mult_coeffs[k,l,l];
+			tr +:= mult_coeffs2[i,j,k]*mult_coeffs2[k,l,l];
 		end for;
 	end for;
 	return tr;
 end function;
 
-matrix_mult := function(A,B)
-	product := [];
-	for i := 1 to #A do
-		Append(~product,[]);
-		for j := 1 to #B[1] do
-			entry := 0;
-			for k := 1 to #A[1] do
-				entry +:= A[i,k]*B[k,j];
-			end for;
-			Append(~product[i],entry);
-		end for;
-	end for;
-	return product;
-end function;
-
-submatrix := function(A,i,j)
-	Asub := A[1..i-1] cat A[i+1..#A];
-	for k := 1 to #A-1 do
-        Asub[k] := Asub[k][1..j-1] cat Asub[k][j+1..#A[1]];
-    end for;
-    return Asub;
-end function;
-
-determinant := function(A) 
-    total := 0;
-
-    if #A eq 1 then
-        return A[1,1];
-    end if;
-
-    for col := 1 to #A do
-        Asub := submatrix(A,1,col);
-        subdet := $$(Asub);
-        sign := (-1) ^ (col+1 mod 2);
-        total +:= sign * A[1,col] * subdet;
-    end for;
-    return total;
-end function;
-
-cofactor_matrix := function(A)
-	cofactor := A;
-	if #A eq 1 then
-		return A;
-	end if;
-	for i := 1 to #A do
-		for j := 1 to #A do
-			sub := submatrix(A,i,j);
-			sign := (-1) ^ (i+j mod 2);
-			cofactor[j,i] := sign*determinant(sub);
-		end for;
-	end for;
-	return cofactor;
-end function;
-
+//Matrix of trace pairing, in new basis.
 T := [];
 for i := 1 to 6 do
 	Append(~T,[]);
@@ -284,69 +365,241 @@ for i := 1 to 6 do
 end for;
 print T;
 
-T_inv := cofactor_matrix(T);
-det := determinant(T);
-print( T[1,4]^2 - 4*T[1,3]*T[1,5]);
-G := 4*T[2,6]^2 - 4*T[2,2]*T[6,6];
-print G;
-Factorisation(G);
+determinant(T);
+// Equals (16*5^5)^3, as should be.  Good.
 
-disc := Discriminant(f0*y1^5 + f1*y1^4 + f2*y1^3 + f3*y1^2 + f4*y1 + f5,y1);
+//Squaring map from dual lattice to ring, for original basis of form b1* = y, b5* = x, (b2,b3,b4) = 8 Delta (x^2,-2xy,y^2)
+F1 := [[0,0,0,1,0],[0,-f0,0,-f2/2,0],[0,0,0,0,-1/2],[1,-f2/2,0,-f4,0],[0,0,-1/2,0,0]];
+F2 := [[0,-f0,0,-f2/2,0],[-f0,3*f0*f2,f0*f3,f1*f3,-f1],[0,f0*f3,f0*f4,(f1*f4-f0*f5)/2,0],[-f2/2,f1*f3,(f1*f4-f0*f5)/2,f2*f4,-f3/2],[0,-f1,0,-f3/2,1]];
+F3 := [[0,0,0,0,-1/2],[0,f0*f3,f0*f4,(f1*f4-f0*f5)/2,0],[0,f0*f4,3*f0*f5,f1*f5,0],[0,(f1*f4-f0*f5)/2,f1*f5,f2*f5,0],[-1/2,0,0,0,0]];
+F4 := [[1,-f2/2,0,-f4,0],[-f2/2,f1*f3,(f1*f4-f0*f5)/2,f2*f4,-f3/2],[0,(f1*f4-f0*f5)/2,f1*f5,f2*f5,0],[-f4,f2*f4,f2*f5,3*f3*f5,-f5],[0,-f3/2,0,-f5,0]];
+F5 := [[0,0,-1/2,0,0],[0,-f1,0,-f3/2,1],[-1/2,0,0,0,0],[0,-f3/2,0,-f5,0],[0,1,0,0,0]];
 
-//Divide entries of cofactor matrix by disc^2:
-T_inv2 := T_inv;
-for i := 1 to 6 do
-	for j := 1 to 6 do
-		T_inv2[i,j] := T_inv[i,j]/(disc^2);
+F := [F1,F2,F3,F4,F5];
+
+//New squaring maps, after changing basis by b1 = -b5, b5 = b1, and correspondingly b1* = -b5*, b5* = b1*:
+C := [[0,0,0,0,1],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[-1,0,0,0,0]];
+G1 := matrix_mult(transpose(C),matrix_mult(matrix_scalar(F5,-1),C));
+G2 := matrix_mult(transpose(C),matrix_mult(F2,C));
+G3 := matrix_mult(transpose(C),matrix_mult(F3,C));
+G4 := matrix_mult(transpose(C),matrix_mult(F4,C));
+G5 := matrix_mult(transpose(C),matrix_mult(F1,C));
+
+G := [G1,G2,G3,G4,G5];
+
+dual_mult := function(a,b)
+	product := [[P | 0,0,0,0,0]];
+	for k := 1 to 5 do
+		product[1,k] := matrix_mult(matrix_mult(a,G[k]),transpose(b))[1,1];
 	end for;
-end for;
-
-//Vector of generic element of \tilde{S}: (y_1 \beta_1^* + ... + y_5 \beta_5^*)*disc*16^3.
-//Adjusting yi's so that we are working with \Phi(f), not \Phi'(f).
-//This amounts to multiplying by a specific element of GL5.
-y := [y1 - 2/5*f2*y2 - f3/10*y3 - 2/5*f4*y4,y2,y3,y4,y5 - 2/5*f1*y2 - f2/10*y3 - 2/5*f3*y4];
-elt := [ P | 0,0,0,0,0,0];
-elt2 := [ P | 0,0,0,0,0,0];
-elt3 := [ P | 0,0,0,0,0,0];
-for k := 1 to 6 do
-	entry := 0;
-	for l := 1 to 5 do
-		entry +:= y[l]*T_inv2[k,l+1];
-	end for;
-	print entry;
-	elt[k] := entry;
-end for;
-
-sextic_prod := function(x,y)
-	prod := [P | 0,0,0,0,0,0];
-	for k := 1 to 6 do
-		prod_coeff := 0;
-		for i := 1 to 6 do
-			for j := 1 to 6 do
-				prod_coeff +:= mult_coeffs[i,j,k]*x[i]*y[j];
-			end for;
-		end for;
-	prod[k] := prod_coeff;
-	end for;
-	return prod;
+	return product;
 end function;
 
-elt2 := sextic_prod(elt,elt);
-elt3 := sextic_prod(elt,elt2);
+x := [[x1,x2,x3,x4,x5]];
+y := [[y1,y2,y3,y4,y5]];
+//x := [[1,0,x3,x4,x5]];
+//y := [[0,1,y3,y4,y5]];
 
-//Calculate trace cubed = trace(elt3), then divide by disc^2
-trace_cubed := 0;
-for k := 1 to 6 do
-	trace_cubed +:= elt3[k]*trace(k,1);
-end for;
+print transpose(x);
 
-print trace_cubed;
+print dual_mult(x,x);
 
-trace_cubed2 := Factorisation(trace_cubed)[1,1];
-print trace_cubed2;
+print matrix_mult(dual_mult(x,x),transpose(x));
 
-segre := -(f0*f2*y2^3 + f0*f3*y2^2*y3 + f0*f4*y2*y3^2 - f0*f5*y2*y3*y4 + f0*f5*y3^3 - f0*y1*y2^2 + f1*f3*y2^2*y4 + f1*f4*y2*y3*y4 + f1*f5*y3^2*y4 - f1*y2^2*y5 + f2*f4*y2*y4^2 + f2*f5*y3*y4^2 - f2*y1*y2*y4 + f3*f5*y4^3 - f3*y2*y4*y5 - f4*y1*y4^2 - f5*y4^2*y5 + y1^2*y4 - y1*y3*y5 + y2*y5^2);
-I := Ideal([trace_cubed2,segre]);
+segre := function(a)
+	return matrix_mult(dual_mult(a,a),transpose(a))[1,1];
+end function;
 
-(16^3*disc)^3*3*segre + 8*disc*trace_cubed;
+basis_vector := function(i)
+	v := [0,0,0,0,0];
+	for k := 1 to 5 do
+		if k eq i then
+			v[k] := 1;
+		end if;
+	end for;
+	return v;
+end function;
+
+quad_subdet := function(x,y,i,j)
+	B := [basis_vector(i),dual_mult(x,x)[1],dual_mult(x,y)[1],dual_mult(y,y)[1],basis_vector(j)];
+	det := 2*determinant(B);
+	return det;
+end function;
+
+print dual_mult(x,y);
+
+//Function evaluating D_6 equations and returning true if they all vanish:
+
+D6_polys := [];
+q12 := x1*y2 - x2*y1;
+q13 := x1*y3 - x3*y1;
+q14 := x1*y4 - x4*y1;
+q15 := x1*y5 - x5*y1;
+q23 := x2*y3 - x3*y2;
+q24 := x2*y4 - x4*y2;
+q25 := x2*y5 - x5*y2;
+q34 := x3*y4 - x4*y3;
+q35 := x3*y5 - x5*y3;
+q45 := x4*y5 - x5*y4;
+Append(~D6_polys,q14 - f0*q23);
+Append(~D6_polys,q45 + q13 + f1*q23 + f2*q24);
+Append(~D6_polys,q12 + q35 - f3*q24 - f4*q34);
+Append(~D6_polys,q25 + f5*q34);
+
+D6_hom := function(s1,s2,s3,s4,s5,t1,t2,t3,t4,t5)
+	evals := [];
+	h := hom< P -> Q | s1,s2,s3,s4,s5,t1,t2,t3,t4,t5 >;
+	for p in D6_polys do
+		Append(~evals,h(p));
+	end for;
+	if evals eq [0,0,0,0] then
+		return true;
+	else
+		return false;
+	end if;
+end function;
+
+D6_basic := function(x1,x2,x3,x4,x5,y1,y2,y3,y4,y5,map)
+	eqns := [];
+	q12 := x1*y2 - x2*y1;
+	q13 := x1*y3 - x3*y1;
+	q14 := x1*y4 - x4*y1;
+	q15 := x1*y5 - x5*y1;
+	q23 := x2*y3 - x3*y2;
+	q24 := x2*y4 - x4*y2;
+	q25 := x2*y5 - x5*y2;
+	q34 := x3*y4 - x4*y3;
+	q35 := x3*y5 - x5*y3;
+	q45 := x4*y5 - x5*y4;
+	Append(~eqns,map(q14 - f0*q23));
+	Append(~eqns,map(q45 + q13 + f1*q23 + f2*q24));
+	Append(~eqns,map(q12 + q35 - f3*q24 - f4*q34));
+	Append(~eqns,map(q25 + f5*q34));
+	if eqns eq [0,0,0,0] then
+		return true;
+	else
+		return false;
+	end if;
+end function;
+
+//From comparing D6_basic and D6_hom below, we see that D6_basic is faster:
+
+stress_test_D6 := function(lower,upper,boolean)
+	for s1 := lower to upper do
+		for s2 := lower to upper do
+			for s3 := lower to upper do
+				for s4 := lower to upper do
+					for s5 := lower to upper do
+						s := [[s1,s2,s3,s4,s5]];
+						for t1 := lower to upper do
+							for t2 := lower to upper do
+								for t3 := lower to upper do
+									for t4 := lower to upper do
+										for t5 := lower to upper do
+											t := [[t1,t2,t3,t4,t5]];
+//											if D6_basic(s1,s2,s3,s4,s5,t1,t2,t3,t4,t5) ne D6_hom(s1,s2,s3,s4,s5,t1,t2,t3,t4,t5) then
+//												print(s);
+//												print(t);
+//												print("ERROR");
+//											end if;
+											if boolean then
+												D6_basic(s1,s2,s3,s4,s5,t1,t2,t3,t4,t5);
+											else
+												D6_hom(s1,s2,s3,s4,s5,t1,t2,t3,t4,t5);
+											end if;
+										end for;
+									end for;
+								end for;
+							end for;
+						end for;
+					end for;
+				end for;
+			end for;
+		end for;
+	end for;
+	return "done";
+end function;
+
+
+
+//Function evaluating basis equations and returning true if they all vanish
+
+basis_polys := function(x,y,map)
+	for i := 1 to 5 do
+		for j := i+1 to 5 do
+			g := map(quad_subdet(x,y,i,j));
+			pij := x[1,i]*y[1,j] - x[1,j]*y[1,i];
+			f := g - pij;
+			if f eq 0 then
+				continue;
+			else
+				return false;
+			end if;
+		end for;
+	end for;
+	segre_eval := [];
+	Append(~segre_eval,map(segre(x)));
+	Append(~segre_eval,map(matrix_mult(dual_mult(x,x),transpose(y))[1,1]));	
+	Append(~segre_eval,map(matrix_mult(dual_mult(y,y),transpose(x))[1,1]));
+	Append(~segre_eval,map(segre(y)));
+	if segre_eval eq [0,0,0,0] then
+		return true;
+	else
+		return false;
+	end if;
+end function;
+
+find_exception := function(lower,upper)
+	for g0 := lower to upper do
+		for g1 := lower to upper do
+			for g2 := lower to upper do
+				for g3 := lower to upper do
+					for g4 := lower to upper do
+						for g5 := lower to upper do
+							h := hom< P -> R | x1,x2,x3,x4,x5,y1,y2,y3,y4,y5,g0,g1,g2,g3,g4,g5 >;
+							for s2 := lower to upper do
+								for s3 := lower to upper do
+									for s4 := lower to upper do
+										for s5 := lower to upper do
+											s := [[0,s2,s3,s4,s5]];
+											if h(segre(s)) ne 0 or s eq [[0,0,0,0,0]] then
+												continue;
+											end if;
+											for t1 := lower to upper do
+												for t2 := lower to upper do
+													for t3 := lower to upper do
+														for t4 := lower to upper do
+															for t5 := lower to upper do
+																t := [[t1,t2,t3,t4,t5]];
+																if h(segre(t)) ne 0 or t eq [[0,0,0,0,0]] or t eq s then
+																	continue;
+																end if;
+																if not D6_basic(0,s2,s3,s4,s5,t1,t2,t3,t4,t5,h) then
+																	if basis_polys(s,t,h) then
+																		print(s);
+																		print(t);
+																		print([g0,g1,g2,g3,g4,g5]);
+																		print("not D6");
+																	end if;
+																end if;
+															end for;
+														end for;
+													end for;
+												end for;
+											end for;
+										end for;
+									end for;
+								end for;
+							end for;
+						end for;
+					end for;
+				end for;
+			end for;
+		end for;
+	end for;
+	return "done";
+end function;
+
+
+
 
